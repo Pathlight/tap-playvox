@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 
-import time
 import singer
-import json
 from singer import metrics, metadata, Transformer
 from singer.bookmarks import set_currently_syncing
 
@@ -49,6 +47,10 @@ def sync_endpoint(client,
 
     if start_date:
         start_datetime = singer.utils.strptime_to_utc(start_date)
+        
+        # Subtract 14 days from the bookmark datetime for Schedule Metrics
+        if(stream_name == 'schedule_metrics'):
+            start_datetime -= timedelta(days=14)
     else:
         # If no start_date or bookmark available, default to start_date of the config
         start_datetime = singer.utils.strptime_to_utc(client.start_date)
@@ -120,26 +122,27 @@ def sync_endpoint(client,
                         
                         #parse through all date and user and channel records for Workstream Agent Metrics 
                         if(len(date_records)>=1):
-                            record_date = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records]['date'] 
-                            user_channel_records = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']]                            
-
-                            # For Worstream Agent and Schedule Metrics, only parse the data if Users data is presents
-                            if(len(user_channel_records)>=1 and stream_name == 'agent_metrics'): 
-                                user_id = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['id']
-                                record_user_firstName = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['firstName']
-                                record_user_lastName = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['lastName']
-                                records = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records][endpoint['channel_key']]
+                            record_data = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records]
+                            record_date = record_data['date'] 
+                            user_channel_records = record_data[endpoint['user_key']]                            
+                            
+                            if(len(user_channel_records)>=1 and stream_name == 'agent_metrics'):
+                                user_record_data = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records] 
+                                user_id = user_record_data['id']
+                                record_user_firstName = user_record_data['firstName']
+                                record_user_lastName = user_record_data['lastName']
+                                records = user_record_data [endpoint['channel_key']]
                                 parsed_user_records += 1
-
-                             # For Worstream Agent and Schedule Metrics, if no date records are present return
+                            
                             if(len(user_channel_records)>=1 and stream_name == 'schedule_metrics'): 
-                                user_id = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['id']
-                                record_user_email = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['email']
-                                record_user_rostered_startTime = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['rosteredStartTime']
-                                record_user_rostered_endTime = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['rosteredEndTime']
-                                record_user_acutal_startTime = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['actualStartTime']
-                                record_user_actual_endTime = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]['actualEndTime']
-                                records = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records][endpoint['channel_key']]
+                                user_record_data = data[endpoint['data_key']][endpoint['metric_key']][parsed_date_records][endpoint['user_key']][parsed_user_records]
+                                user_id = user_record_data['id']
+                                record_user_email = user_record_data['email']
+                                record_user_rostered_startTime = user_record_data['rosteredStartTime']
+                                record_user_rostered_endTime = user_record_data['rosteredEndTime']
+                                record_user_acutal_startTime = user_record_data['actualStartTime']
+                                record_user_actual_endTime = user_record_data['actualEndTime']
+                                records = user_record_data[endpoint['channel_key']]
                                 parsed_user_records += 1
                             
                             if len(user_channel_records)==parsed_user_records:
@@ -187,18 +190,9 @@ def sync_endpoint(client,
                         
                         if len(date_records)==parsed_date_records:
                             parse = False
-
-        # Subtract 14 days from the current date and time for Schedule Metrics
-        startDate = datetime.utcnow() - timedelta(days=14)
-
-        # Set the time to midnight
-        startDate = startDate.replace(hour=0, minute=0, second=0, microsecond=0)
                    
         # 1. set bookmark
-        if(stream_name == 'schedule_metrics'):
-            singer.write_bookmark(state, stream_name, 'endDate', str(startDate.isoformat()))
-        else:
-            singer.write_bookmark(state, stream_name, 'endDate', str(datetime.utcnow().isoformat()))
+        singer.write_bookmark(state, stream_name, 'endDate', str(datetime.utcnow().isoformat()))
             
         # for records that expect to be paged
         if endpoint.get('paginate', True):
