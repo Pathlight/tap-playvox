@@ -45,29 +45,24 @@ def sync_endpoint(client,
                                      key='endDate',
                                      default=client.start_date)
 
-    if start_date:
-        start_datetime = singer.utils.strptime_to_utc(start_date)
-        
-        # Subtract 14 days from the bookmark datetime for Schedule Metrics
-        if(stream_name == 'schedule_metrics'):
-            start_datetime -= timedelta(days=14)
-    else:
-        # If no start_date or bookmark available, default to start_date of the config
-        start_datetime = singer.utils.strptime_to_utc(client.start_date)
-        
-        dt_string = str(start_datetime)
-        dt_object = datetime.fromisoformat(dt_string)
-        start_datetime = dt_object.strftime(iso_format)
-    
+    start_datetime = singer.utils.strptime_to_utc(start_date)
+
+    # Subtract 14 days from the bookmark datetime for Schedule Metrics since there can be updates
+    # during this period
+    if stream_name == 'schedule_metrics':
+        start_datetime -= timedelta(days=14)
+
+    iso_start_datetime = start_datetime.strftime(iso_format)
+
     if stream_name == 'tasks':
         params = {
-            'taskStartTimeFrom': str(start_datetime),
+            'taskStartTimeFrom': iso_start_datetime,
             'taskStartTimeTo': str(datetime.utcnow().isoformat())
         }
  
     if stream_name == 'agent_metrics' or stream_name == 'schedule_metrics':
         params = {
-            'startTime': str(start_datetime),
+            'startTime': iso_start_datetime,
             'userGrouping': 'true',
             'dateGrouping': 'true'
         }
