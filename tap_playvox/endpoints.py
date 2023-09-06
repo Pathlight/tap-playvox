@@ -16,11 +16,12 @@ ENDPOINTS_CONFIG = {
         'metric_key': 'dates',
         'user_key':  'users',
         'channel_key': 'channels', 
-        'pk': ['id', 'date'],
+        'pk': ['id', 'date', 'channel'],
         'paginate': False,
         'provides': {
             'id': 'id',
-            'date': 'date'
+            'date': 'date',
+            'channel': 'channel'
         }   
     },
     'schedule_metrics': {
@@ -30,11 +31,12 @@ ENDPOINTS_CONFIG = {
         'metric_key': 'dates',
         'user_key':  'users',
         'channel_key': 'channels', 
-        'pk': ['id', 'date'],
+        'pk': ['id', 'date', 'channel'],
         'paginate': False,
         'provides': {
             'id': 'id',
-            'date': 'date'
+            'date': 'date',
+            'channel' : 'channel'
         }   
     },
      'tasks': {
@@ -47,5 +49,6 @@ ENDPOINTS_CONFIG = {
             'id': 'id',
             'createdAt': 'createdAt'
         }   
-    }    
+    }
+    
 }
