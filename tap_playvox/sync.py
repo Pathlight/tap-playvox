@@ -48,9 +48,9 @@ def sync_endpoint(client,
 
     start_datetime = singer.utils.strptime_to_utc(start_date)
 
-    # Subtract 14 days from the bookmark datetime for Schedule Metrics since there can be updates
+    # Subtract 14 days from the bookmark datetime for Schedule Metrics and Tasks stream data since there can be updates
     # during this period
-    if stream_name == 'schedule_metrics':
+    if stream_name == 'schedule_metrics' or stream_name == 'tasks':
         start_datetime -= timedelta(days=14)
 
     iso_start_datetime = start_datetime.strftime(iso_format)
